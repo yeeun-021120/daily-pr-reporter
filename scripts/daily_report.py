@@ -57,6 +57,11 @@ def summarize_with_claude(text):
     res = requests.post(url, headers=headers, json=body)
     data = res.json()
 
+    print("Claude raw response:", data)
+
+    if "content" not in data:   
+        raise Exception(f"Claude API Error: {data}")
+
     return data["content"][0]["text"]
 
 
