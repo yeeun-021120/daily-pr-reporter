@@ -47,7 +47,7 @@ def summarize_with_claude(text):
     }
 
     body = {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-3-5-sonnet-latest",
         "max_tokens": 500,
         "messages": [
             {"role": "user", "content": f"다음 GitHub 활동을 한국어로 요약해줘:\n{text}"}
