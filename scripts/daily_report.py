@@ -25,7 +25,12 @@ def get_recent_activity():
     # Pull Requests
     pr_url = f"https://api.github.com/repos/{OWNER}/{REPO}/pulls?state=all&per_page=20"
     pr_res = requests.get(pr_url, headers=headers)
-    pr_data = pr_res.json()
+
+    if pr_res.status_code != 200:
+        print(f"⚠️ GitHub PR 조회 실패 (HTTP {pr_res.status_code}): {pr_res.text}")
+        pr_data = []
+    else:
+        pr_data = pr_res.json()
 
     activities = []
 
@@ -38,7 +43,12 @@ def get_recent_activity():
     # Commits
     commit_url = f"https://api.github.com/repos/{OWNER}/{REPO}/commits?since={since}"
     commit_res = requests.get(commit_url, headers=headers)
-    commit_data = commit_res.json()
+
+    if commit_res.status_code != 200:
+        print(f"⚠️ GitHub Commit 조회 실패 (HTTP {commit_res.status_code}): {commit_res.text}")
+        commit_data = []
+    else:
+        commit_data = commit_res.json()
 
     for commit in commit_data:
         activities.append(
@@ -62,7 +72,7 @@ def summarize_with_claude(text):
     }
 
     body = {
-        "model": "claude-3-5-sonnet-latest",
+        "model": "claude-sonnet-4-5-20250514",
         "max_tokens": 1000,
         "messages": [
             {
@@ -74,6 +84,10 @@ def summarize_with_claude(text):
 
     response = requests.post(url, headers=headers, json=body)
 
+    # HTTP 상태 코드 먼저 체크
+    if response.status_code != 200:
+        raise Exception(f"Claude API 실패 (HTTP {response.status_code}): {response.text}")
+
     try:
         data = response.json()
     except Exception:
@@ -81,9 +95,9 @@ def summarize_with_claude(text):
 
     print("🔥 Claude Raw Response:", data)
 
-    # 에러 응답 처리
-    if "content" not in data:
-        raise Exception(f"Claude API Error: {data}")
+    # content 키 존재 여부 체크
+    if "content" not in data or not data["content"]:
+        raise Exception(f"Claude 응답에 content 없음: {data}")
 
     return data["content"][0]["text"]
 
@@ -145,7 +159,7 @@ def upload_to_notion(summary, pr_count):
     response = requests.post(url, headers=headers, json=body)
 
     if response.status_code != 200:
-        raise Exception(f"Notion 업로드 실패: {response.text}")
+        raise Exception(f"Notion 업로드 실패 (HTTP {response.status_code}): {response.text}")
 
     print("✅ Notion 업로드 완료")
 
@@ -157,6 +171,21 @@ if __name__ == "__main__":
 
     print("🚀 Daily Report Start")
 
+    # 환경 변수 체크
+    missing = []
+    if not GITHUB_TOKEN:
+        missing.append("GITHUB_TOKEN")
+    if not CLAUDE_API_KEY:
+        missing.append("CLAUDE_API_KEY")
+    if not NOTION_TOKEN:
+        missing.append("NOTION_TOKEN")
+    if not NOTION_DB_ID:
+        missing.append("NOTION_DB_ID")
+
+    if missing:
+        print(f"❌ 환경 변수 누락: {', '.join(missing)}")
+        exit(1)
+
     activities = get_recent_activity()
 
     if not activities:
@@ -164,8 +193,10 @@ if __name__ == "__main__":
         exit(0)
 
     joined_text = "\n".join(activities)
+    print(f"📋 수집된 활동 {len(activities)}건")
 
     summary = summarize_with_claude(joined_text)
+    print(f"📝 요약 완료: {summary[:100]}...")
 
     pr_count = sum(1 for a in activities if a.startswith("PR:"))
 
