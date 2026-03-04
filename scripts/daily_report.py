@@ -67,6 +67,16 @@ def summarize_with_claude(text):
 if "content" not in data:
     raise Exception(f"Claude API Error: {data}")
 
+print("Claude raw response:", data)
+
+if "content" not in data:
+    raise Exception(f"Claude API Error: {data}")
+
+print("Claude raw response:", data)
+
+if "content" not in data:
+    raise Exception(f"Claude API Error: {data}")
+
 return data["content"][0]["text"]
 
 
