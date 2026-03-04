@@ -72,7 +72,7 @@ def summarize_with_claude(text):
     }
 
     body = {
-        "model": "claude-sonnet-4-5-20250514",
+        "model": "claude-sonnet-4-5-20250929",
         "max_tokens": 1000,
         "messages": [
             {
